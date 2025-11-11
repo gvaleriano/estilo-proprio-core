@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 interface Client {
   id: string;
@@ -31,6 +32,7 @@ export default function ProductForm() {
     consigned: false,
     consignor_id: "",
     stock_quantity: "1",
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function ProductForm() {
         consigned: formData.consigned,
         consignor_id: formData.consigned && formData.consignor_id ? formData.consignor_id : null,
         stock_quantity: parseInt(formData.stock_quantity),
+        images: formData.images,
       };
 
       const { error } = await supabase.from("products").insert([productData]);
@@ -190,6 +193,11 @@ export default function ProductForm() {
                 />
               </div>
             </div>
+
+            <ImageUpload
+              images={formData.images}
+              onImagesChange={(images) => setFormData({ ...formData, images })}
+            />
 
             <div className="flex items-center space-x-2">
               <Switch

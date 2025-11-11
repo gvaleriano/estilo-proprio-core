@@ -6,7 +6,8 @@ import {
   Tag, 
   Ticket,
   CreditCard,
-  LogOut
+  LogOut,
+  ShoppingCart
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +31,7 @@ const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Produtos", url: "/products", icon: Package },
   { title: "Clientes", url: "/clients", icon: Users },
+  { title: "PDV / Vendas", url: "/sales", icon: ShoppingCart },
   { title: "Caixa", url: "/cash", icon: DollarSign },
   { title: "Promoções", url: "/promotions", icon: Tag },
   { title: "Cupons", url: "/coupons", icon: Ticket },
