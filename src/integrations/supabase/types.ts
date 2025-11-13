@@ -204,6 +204,7 @@ export type Database = {
           brand: string | null
           category: string | null
           consigned: boolean | null
+          consignment_percentage: number | null
           consignor_id: string | null
           created_at: string
           description: string | null
@@ -221,6 +222,7 @@ export type Database = {
           brand?: string | null
           category?: string | null
           consigned?: boolean | null
+          consignment_percentage?: number | null
           consignor_id?: string | null
           created_at?: string
           description?: string | null
@@ -238,6 +240,7 @@ export type Database = {
           brand?: string | null
           category?: string | null
           consigned?: boolean | null
+          consignment_percentage?: number | null
           consignor_id?: string | null
           created_at?: string
           description?: string | null

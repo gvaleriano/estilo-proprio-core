@@ -31,6 +31,7 @@ export default function ProductForm() {
     price: "",
     consigned: false,
     consignor_id: "",
+    consignment_percentage: "",
     stock_quantity: "1",
     images: [] as string[],
   });
@@ -65,6 +66,7 @@ export default function ProductForm() {
         price: parseFloat(formData.price),
         consigned: formData.consigned,
         consignor_id: formData.consigned && formData.consignor_id ? formData.consignor_id : null,
+        consignment_percentage: formData.consigned && formData.consignment_percentage ? parseFloat(formData.consignment_percentage) : null,
         stock_quantity: parseInt(formData.stock_quantity),
         images: formData.images,
       };
@@ -213,20 +215,37 @@ export default function ProductForm() {
             </div>
 
             {formData.consigned && (
-              <div className="space-y-2">
-                <Label htmlFor="consignor">Consignante *</Label>
-                <Select value={formData.consignor_id} onValueChange={(value) => setFormData({ ...formData, consignor_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o consignante" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="consignor">Consignante *</Label>
+                  <Select value={formData.consignor_id} onValueChange={(value) => setFormData({ ...formData, consignor_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o consignante" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="consignment_percentage">Porcentagem para Consignante (%) *</Label>
+                  <Input
+                    id="consignment_percentage"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    required
+                    value={formData.consignment_percentage}
+                    onChange={(e) => setFormData({ ...formData, consignment_percentage: e.target.value })}
+                    placeholder="Ex: 50"
+                  />
+                </div>
               </div>
             )}
 

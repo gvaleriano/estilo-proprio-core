@@ -24,6 +24,11 @@ interface Product {
   stock_quantity: number;
   status: string;
   consigned: boolean;
+  consignment_percentage: number | null;
+  consignor_id: string | null;
+  consignor?: {
+    name: string;
+  };
 }
 
 export default function Products() {
@@ -40,7 +45,10 @@ export default function Products() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          consignor:clients(name)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -111,6 +119,7 @@ export default function Products() {
                 <TableHead>Estoque</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Consignado</TableHead>
+                <TableHead>Cliente</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,9 +133,18 @@ export default function Products() {
                   <TableCell>{getStatusBadge(product.status)}</TableCell>
                   <TableCell>
                     {product.consigned ? (
-                      <Badge variant="secondary">Sim</Badge>
+                      <Badge variant="secondary">
+                        Sim {product.consignment_percentage && `(${product.consignment_percentage}%)`}
+                      </Badge>
                     ) : (
                       <Badge variant="outline">Não</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {product.consigned && product.consignor ? (
+                      <span className="text-sm">{product.consignor.name}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
                 </TableRow>
