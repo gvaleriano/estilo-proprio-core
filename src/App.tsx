@@ -15,6 +15,8 @@ import Promotions from "./pages/Promotions";
 import Coupons from "./pages/Coupons";
 import Payments from "./pages/Payments";
 import Sales from "./pages/Sales";
+import Reports from "./pages/Reports";
+import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -114,6 +116,26 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Sales />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Reports />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/events"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Events />
                 </AppLayout>
               </ProtectedRoute>
             }

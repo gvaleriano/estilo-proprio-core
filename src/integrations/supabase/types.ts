@@ -127,6 +127,78 @@ export type Database = {
         }
         Relationships: []
       }
+      event_invitations: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          email: string | null
+          event_id: string
+          id: string
+          phone: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          email?: string | null
+          event_id: string
+          id?: string
+          phone?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          email?: string | null
+          event_id?: string
+          id?: string
+          phone?: string | null
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_invitations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_date: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand: string | null

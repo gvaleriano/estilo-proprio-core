@@ -7,7 +7,9 @@ import {
   Ticket,
   CreditCard,
   LogOut,
-  ShoppingCart
+  ShoppingCart,
+  BarChart3,
+  Calendar
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +38,8 @@ const navItems = [
   { title: "Promoções", url: "/promotions", icon: Tag },
   { title: "Cupons", url: "/coupons", icon: Ticket },
   { title: "Pagamentos", url: "/payments", icon: CreditCard },
+  { title: "Relatórios", url: "/reports", icon: BarChart3 },
+  { title: "Eventos", url: "/events", icon: Calendar },
 ];
 
 export function AppSidebar() {
