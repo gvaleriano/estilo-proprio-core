@@ -40,7 +40,7 @@ export default function Sales() {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -199,7 +199,7 @@ export default function Sales() {
 
       toast.success("Venda realizada com sucesso!");
       setCart([]);
-      setSelectedClientId("");
+      setSelectedClientId(undefined);
       fetchProducts();
     } catch (error: any) {
       toast.error("Erro ao processar venda: " + error.message);

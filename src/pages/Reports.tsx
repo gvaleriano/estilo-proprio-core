@@ -6,9 +6,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, TrendingUp, DollarSign, Users, Package } from "lucide-react";
+import { CalendarIcon, TrendingUp, DollarSign, Users, Package, Download, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface SalesData {
   date: string;
@@ -179,41 +181,140 @@ export default function Reports() {
     }
   };
 
+  const exportToCSV = () => {
+    try {
+      const csvData = [
+        ["Resumo do Período"],
+        ["Receita Total", `R$ ${summary.totalRevenue.toFixed(2)}`],
+        ["Total de Vendas", summary.totalSales.toString()],
+        ["Ticket Médio", `R$ ${summary.avgTicket.toFixed(2)}`],
+        ["Total de Clientes", summary.totalClients.toString()],
+        [""],
+        ["Vendas por Dia"],
+        ["Data", "Total (R$)", "Quantidade"],
+        ...salesByDay.map(item => [item.date, item.total.toFixed(2), item.count.toString()]),
+        [""],
+        ["Top 10 Produtos"],
+        ["Produto", "Quantidade", "Receita (R$)"],
+        ...topProducts.map(item => [item.title, item.quantity.toString(), item.revenue.toFixed(2)]),
+        [""],
+        ["Top Clientes"],
+        ["Cliente", "Compras", "Total (R$)"],
+        ...topClients.map(item => [item.name, item.purchases.toString(), item.total.toFixed(2)]),
+      ];
+
+      const csv = csvData.map(row => row.join(";")).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `relatorio_${format(dateRange?.from || new Date(), "dd-MM-yyyy")}_${format(dateRange?.to || new Date(), "dd-MM-yyyy")}.csv`;
+      link.click();
+      toast.success("Relatório exportado para CSV");
+    } catch (error: any) {
+      toast.error("Erro ao exportar CSV: " + error.message);
+    }
+  };
+
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(18);
+      doc.text("Relatório de Vendas", 14, 20);
+      
+      // Period
+      doc.setFontSize(11);
+      doc.text(`Período: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")} - ${format(dateRange?.to || new Date(), "dd/MM/yyyy")}`, 14, 30);
+      
+      // Summary
+      doc.setFontSize(14);
+      doc.text("Resumo", 14, 40);
+      doc.setFontSize(10);
+      doc.text(`Receita Total: R$ ${summary.totalRevenue.toFixed(2)}`, 14, 48);
+      doc.text(`Total de Vendas: ${summary.totalSales}`, 14, 55);
+      doc.text(`Ticket Médio: R$ ${summary.avgTicket.toFixed(2)}`, 14, 62);
+      doc.text(`Total de Clientes: ${summary.totalClients}`, 14, 69);
+      
+      // Top Products Table
+      autoTable(doc, {
+        startY: 80,
+        head: [["Top 10 Produtos", "Quantidade", "Receita (R$)"]],
+        body: topProducts.map(item => [
+          item.title,
+          item.quantity.toString(),
+          `R$ ${item.revenue.toFixed(2)}`
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      
+      // Top Clients Table
+      const finalY = (doc as any).lastAutoTable.finalY || 80;
+      autoTable(doc, {
+        startY: finalY + 10,
+        head: [["Top Clientes", "Compras", "Total (R$)"]],
+        body: topClients.slice(0, 5).map(item => [
+          item.name,
+          item.purchases.toString(),
+          `R$ ${item.total.toFixed(2)}`
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+      
+      doc.save(`relatorio_${format(dateRange?.from || new Date(), "dd-MM-yyyy")}_${format(dateRange?.to || new Date(), "dd-MM-yyyy")}.pdf`);
+      toast.success("Relatório exportado para PDF");
+    } catch (error: any) {
+      toast.error("Erro ao exportar PDF: " + error.message);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Relatórios Avançados</h1>
           <p className="text-muted-foreground">Análise completa do desempenho da loja</p>
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
-                  </>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={exportToCSV}>
+            <FileText className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={exportToPDF}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar PDF
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "dd/MM/yyyy")
+                  )
                 ) : (
-                  format(dateRange.from, "dd/MM/yyyy")
-                )
-              ) : (
-                "Selecionar período"
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
+                  "Selecionar período"
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* Summary Cards */}
