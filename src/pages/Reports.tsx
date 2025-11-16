@@ -30,6 +30,16 @@ interface ClientStats {
   total: number;
 }
 
+interface StockMovement {
+  id: string;
+  created_at: string;
+  type: string;
+  quantity: number;
+  reason: string | null;
+  product_title: string;
+  consigned: boolean;
+}
+
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
 export default function Reports() {
@@ -41,6 +51,7 @@ export default function Reports() {
   const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
   const [topClients, setTopClients] = useState<ClientStats[]>([]);
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [summary, setSummary] = useState({
     totalRevenue: 0,
     totalSales: 0,
@@ -169,6 +180,39 @@ export default function Reports() {
         }))
       );
 
+      // Fetch stock movements
+      const { data: movements, error: movementsError } = await supabase
+        .from("stock_movements")
+        .select(`
+          id,
+          created_at,
+          type,
+          quantity,
+          reason,
+          product_id,
+          products (
+            title,
+            consigned
+          )
+        `)
+        .gte("created_at", fromDate)
+        .lte("created_at", toDate)
+        .order("created_at", { ascending: false });
+
+      if (movementsError) throw movementsError;
+
+      setStockMovements(
+        movements?.map((m: any) => ({
+          id: m.id,
+          created_at: m.created_at,
+          type: m.type,
+          quantity: m.quantity,
+          reason: m.reason,
+          product_title: m.products?.title || "Produto desconhecido",
+          consigned: m.products?.consigned || false,
+        })) || []
+      );
+
       // Calculate summary
       setSummary({
         totalRevenue,
@@ -201,6 +245,17 @@ export default function Reports() {
         ["Top Clientes"],
         ["Cliente", "Compras", "Total (R$)"],
         ...topClients.map(item => [item.name, item.purchases.toString(), item.total.toFixed(2)]),
+        [""],
+        ["Movimentação de Estoque"],
+        ["Produto", "Data", "Tipo", "Quantidade", "Motivo", "Consignado"],
+        ...stockMovements.map(m => [
+          m.product_title,
+          format(new Date(m.created_at), "dd/MM/yyyy HH:mm"),
+          m.type === "in" ? "Entrada" : m.type === "out" ? "Saída" : m.type,
+          m.quantity.toString(),
+          m.reason || "-",
+          m.consigned ? "Sim" : "Não"
+        ]),
       ];
 
       const csv = csvData.map(row => row.join(";")).join("\n");
@@ -250,7 +305,7 @@ export default function Reports() {
       });
       
       // Top Clients Table
-      const finalY = (doc as any).lastAutoTable.finalY || 80;
+      let finalY = (doc as any).lastAutoTable.finalY || 80;
       autoTable(doc, {
         startY: finalY + 10,
         head: [["Top Clientes", "Compras", "Total (R$)"]],
@@ -258,6 +313,22 @@ export default function Reports() {
           item.name,
           item.purchases.toString(),
           `R$ ${item.total.toFixed(2)}`
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [99, 102, 241] },
+      });
+
+      // Stock Movements Table
+      finalY = (doc as any).lastAutoTable.finalY || 80;
+      autoTable(doc, {
+        startY: finalY + 10,
+        head: [["Movimentação de Estoque", "Data", "Tipo", "Qtd", "Consignado"]],
+        body: stockMovements.slice(0, 20).map(item => [
+          item.product_title,
+          format(new Date(item.created_at), "dd/MM/yyyy HH:mm"),
+          item.type === "in" ? "Entrada" : item.type === "out" ? "Saída" : item.type,
+          item.quantity.toString(),
+          item.consigned ? "Sim" : "Não"
         ]),
         theme: "grid",
         headStyles: { fillColor: [99, 102, 241] },
@@ -445,6 +516,72 @@ export default function Reports() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Stock Movements Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Movimentação de Estoque</CardTitle>
+          <CardDescription>Histórico de entradas e saídas de produtos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 font-medium">Produto</th>
+                  <th className="text-left p-2 font-medium">Data</th>
+                  <th className="text-left p-2 font-medium">Tipo</th>
+                  <th className="text-right p-2 font-medium">Quantidade</th>
+                  <th className="text-left p-2 font-medium">Motivo</th>
+                  <th className="text-center p-2 font-medium">Consignado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockMovements.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                      Nenhuma movimentação no período
+                    </td>
+                  </tr>
+                ) : (
+                  stockMovements.map((movement) => (
+                    <tr key={movement.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2">{movement.product_title}</td>
+                      <td className="p-2 text-sm text-muted-foreground">
+                        {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm")}
+                      </td>
+                      <td className="p-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            movement.type === "in"
+                              ? "bg-primary/10 text-primary"
+                              : movement.type === "out"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {movement.type === "in" ? "Entrada" : movement.type === "out" ? "Saída" : movement.type}
+                        </span>
+                      </td>
+                      <td className="p-2 text-right font-medium">{movement.quantity}</td>
+                      <td className="p-2 text-sm text-muted-foreground">{movement.reason || "-"}</td>
+                      <td className="p-2 text-center">
+                        {movement.consigned ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/50 text-secondary-foreground">
+                            Sim
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Não</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
