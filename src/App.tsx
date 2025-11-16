@@ -61,6 +61,16 @@ const App = () => (
             }
           />
           <Route
+            path="/products/edit/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ProductForm />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/clients"
             element={
               <ProtectedRoute>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,10 @@ interface Client {
 
 export default function ProductForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const isEditMode = Boolean(id);
   const [formData, setFormData] = useState({
     sku: "",
     title: "",
@@ -38,7 +40,10 @@ export default function ProductForm() {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
 
   const fetchClients = async () => {
     const { data, error } = await supabase
@@ -48,6 +53,40 @@ export default function ProductForm() {
 
     if (!error && data) {
       setClients(data);
+    }
+  };
+
+  const fetchProduct = async () => {
+    if (!id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          sku: data.sku || "",
+          title: data.title,
+          description: data.description || "",
+          category: data.category || "",
+          size: data.size || "",
+          brand: data.brand || "",
+          price: data.price.toString(),
+          consigned: data.consigned || false,
+          consignor_id: data.consignor_id || "",
+          consignment_percentage: data.consignment_percentage?.toString() || "",
+          stock_quantity: data.stock_quantity?.toString() || "1",
+          images: data.images || [],
+        });
+      }
+    } catch (error: any) {
+      toast.error("Erro ao carregar produto: " + error.message);
+      navigate("/products");
     }
   };
 
@@ -71,14 +110,24 @@ export default function ProductForm() {
         images: formData.images,
       };
 
-      const { error } = await supabase.from("products").insert([productData]);
+      if (isEditMode) {
+        const { error } = await supabase
+          .from("products")
+          .update(productData)
+          .eq("id", id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success("Produto atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("products").insert([productData]);
 
-      toast.success("Produto cadastrado com sucesso!");
+        if (error) throw error;
+        toast.success("Produto cadastrado com sucesso!");
+      }
+
       navigate("/products");
     } catch (error: any) {
-      toast.error("Erro ao cadastrar produto: " + error.message);
+      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto: ` + error.message);
     } finally {
       setLoading(false);
     }
@@ -91,15 +140,21 @@ export default function ProductForm() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Novo Produto</h2>
-          <p className="text-muted-foreground">Adicione um novo produto ao estoque</p>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+            {isEditMode ? "Editar Produto" : "Novo Produto"}
+          </h2>
+          <p className="text-muted-foreground">
+            {isEditMode ? "Atualize as informações do produto" : "Adicione um novo produto ao estoque"}
+          </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Informações do Produto</CardTitle>
-          <CardDescription>Preencha os dados do produto abaixo</CardDescription>
+          <CardDescription>
+            {isEditMode ? "Atualize os dados do produto" : "Preencha os dados do produto abaixo"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -251,7 +306,7 @@ export default function ProductForm() {
 
             <div className="flex gap-4">
               <Button type="submit" disabled={loading}>
-                {loading ? "Cadastrando..." : "Cadastrar Produto"}
+                {loading ? (isEditMode ? "Atualizando..." : "Cadastrando...") : (isEditMode ? "Atualizar Produto" : "Cadastrar Produto")}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate("/products")}>
                 Cancelar

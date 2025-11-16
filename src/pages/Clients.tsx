@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,6 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Client {
   id: string;
@@ -36,6 +46,9 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -63,25 +76,80 @@ export default function Clients() {
     }
   };
 
+  const handleOpenDialog = (client?: Client) => {
+    if (client) {
+      setEditingClient(client);
+      setFormData({
+        name: client.name,
+        email: client.email || "",
+        phone: client.phone || "",
+        cpf: client.cpf || "",
+      });
+    } else {
+      setEditingClient(null);
+      setFormData({ name: "", email: "", phone: "", cpf: "" });
+    }
+    setDialogOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from("clients").insert([{
+      const clientData = {
         name: formData.name,
         email: formData.email || null,
         phone: formData.phone || null,
         cpf: formData.cpf || null,
-      }]);
+      };
 
-      if (error) throw error;
+      if (editingClient) {
+        const { error } = await supabase
+          .from("clients")
+          .update(clientData)
+          .eq("id", editingClient.id);
 
-      toast.success("Cliente cadastrado com sucesso!");
+        if (error) throw error;
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("clients").insert([clientData]);
+
+        if (error) throw error;
+        toast.success("Cliente cadastrado com sucesso!");
+      }
+
       setDialogOpen(false);
+      setEditingClient(null);
       setFormData({ name: "", email: "", phone: "", cpf: "" });
       fetchClients();
     } catch (error: any) {
-      toast.error("Erro ao cadastrar cliente: " + error.message);
+      toast.error(`Erro ao ${editingClient ? "atualizar" : "cadastrar"} cliente: ` + error.message);
+    }
+  };
+
+  const handleDeleteClick = (clientId: string) => {
+    setClientToDelete(clientId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!clientToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", clientToDelete);
+
+      if (error) throw error;
+
+      toast.success("Cliente excluído com sucesso!");
+      fetchClients();
+    } catch (error: any) {
+      toast.error("Erro ao excluir cliente: " + error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
     }
   };
 
@@ -101,15 +169,17 @@ export default function Clients() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => handleOpenDialog()}>
               <Plus className="h-4 w-4" />
               Novo Cliente
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo Cliente</DialogTitle>
-              <DialogDescription>Cadastre um novo cliente ou consignante</DialogDescription>
+              <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+              <DialogDescription>
+                {editingClient ? "Atualize os dados do cliente" : "Cadastre um novo cliente ou consignante"}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -151,7 +221,7 @@ export default function Clients() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                Cadastrar Cliente
+                {editingClient ? "Atualizar Cliente" : "Cadastrar Cliente"}
               </Button>
             </form>
           </DialogContent>
@@ -183,6 +253,7 @@ export default function Clients() {
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -192,12 +263,47 @@ export default function Clients() {
                   <TableCell>{client.email || "-"}</TableCell>
                   <TableCell>{client.phone || "-"}</TableCell>
                   <TableCell>{client.cpf || "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenDialog(client)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(client.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
