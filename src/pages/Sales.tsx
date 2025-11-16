@@ -338,7 +338,6 @@ export default function Sales() {
                         <SelectValue placeholder="Selecione o cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem cliente</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
