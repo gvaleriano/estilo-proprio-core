@@ -166,41 +166,36 @@ export default function Sales() {
 
       if (saleError) throw saleError;
 
-      // Create stock movements and update product quantities
-      const stockUpdates = cart.map(async (item) => {
-        // Insert stock movement
-        const { error: movementError } = await supabase.from("stock_movements").insert({
-          product_id: item.product.id,
-          type: "out",
-          quantity: item.quantity,
-          reason: "Venda",
-          reference_id: saleData.id,
-        });
+      // Create stock movements and update product quantities sequentially
+      for (const item of cart) {
+        try {
+          // Insert stock movement
+          const { error: movementError } = await supabase.from("stock_movements").insert({
+            product_id: item.product.id,
+            type: "out",
+            quantity: item.quantity,
+            reason: "Venda",
+            reference_id: saleData.id,
+          });
 
-        if (movementError) {
-          console.error("Erro ao criar movimento de estoque:", movementError);
-          throw movementError;
+          if (movementError) throw movementError;
+
+          // Update product stock
+          const newStock = item.product.stock_quantity - item.quantity;
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({
+              stock_quantity: newStock,
+              status: newStock === 0 ? "sold" : "available",
+            })
+            .eq("id", item.product.id);
+
+          if (updateError) throw updateError;
+        } catch (error: any) {
+          console.error("Erro ao processar item:", item.product.title, error);
+          throw new Error(`Falha ao atualizar estoque: ${error.message}`);
         }
-
-        // Update product stock
-        const newStock = item.product.stock_quantity - item.quantity;
-        const { error: updateError } = await supabase
-          .from("products")
-          .update({
-            stock_quantity: newStock,
-            status: newStock === 0 ? "sold" : "available",
-          })
-          .eq("id", item.product.id);
-
-        if (updateError) {
-          console.error("Erro ao atualizar estoque do produto:", updateError);
-          throw updateError;
-        }
-
-        console.log(`Estoque atualizado: ${item.product.title} - Novo estoque: ${newStock}`);
-      });
-
-      await Promise.all(stockUpdates);
+      }
 
       // Create cash flow entry
       await supabase.from("cash_flow").insert({
