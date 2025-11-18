@@ -180,15 +180,21 @@ export default function Sales() {
 
           if (movementError) throw movementError;
 
-          // Update product stock
+          // Update product stock using upsert (avoids PATCH issues)
           const newStock = item.product.stock_quantity - item.quantity;
           const { error: updateError } = await supabase
             .from("products")
-            .update({
-              stock_quantity: newStock,
-              status: newStock === 0 ? "sold" : "available",
-            })
-            .eq("id", item.product.id);
+            .upsert([
+              {
+                id: item.product.id,
+                title: item.product.title,
+                price: item.product.price,
+                stock_quantity: newStock,
+                status: newStock === 0 ? "sold" : "available",
+                consigned: item.product.consigned,
+                consignor_id: item.product.consignor_id,
+              },
+            ]);
 
           if (updateError) throw updateError;
         } catch (error: any) {
