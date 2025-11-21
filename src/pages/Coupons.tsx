@@ -144,12 +144,17 @@ export default function Coupons() {
               </div>
               <div className="space-y-2">
                 <Label>Tipo de Desconto</Label>
-                <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: "percent" | "fixed") =>
+                    setFormData({ ...formData, type: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="percentage">Percentual</SelectItem>
+                    <SelectItem value="percent">Percentual</SelectItem>
                     <SelectItem value="fixed">Valor Fixo</SelectItem>
                   </SelectContent>
                 </Select>

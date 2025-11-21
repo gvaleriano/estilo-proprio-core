@@ -62,9 +62,7 @@ export default function Payments() {
 
   const getPaymentMethodIcon = (method: string | null) => {
     switch (method) {
-      case "credit":
-        return <CreditCard className="h-4 w-4" />;
-      case "debit":
+      case "card":
         return <CreditCard className="h-4 w-4" />;
       case "pix":
         return <Smartphone className="h-4 w-4" />;
@@ -77,10 +75,10 @@ export default function Payments() {
 
   const getPaymentMethodLabel = (method: string | null) => {
     const labels: Record<string, string> = {
-      credit: "Crédito",
-      debit: "Débito",
+      card: "Cartão",
       pix: "PIX",
       cash: "Dinheiro",
+      other: "Outro",
     };
     return labels[method || ""] || method || "N/A";
   };
