@@ -172,39 +172,34 @@ export default function Sales() {
         throw new Error("Falha ao registrar venda");
       }
 
-      // Create stock movements in parallel
-      const stockMovementPromises = cart.map((item) =>
-        supabase.from("stock_movements").insert({
+      // Process stock movements and updates sequentially to avoid connection issues
+      for (const item of cart) {
+        // Insert stock movement
+        const { error: movementError } = await supabase.from("stock_movements").insert({
           product_id: item.product.id,
           type: "out",
           quantity: item.quantity,
           reason: "Venda",
           reference_id: saleData.id,
-        })
-      );
+        });
 
-      const movementResults = await Promise.all(stockMovementPromises);
-      const movementErrors = movementResults.filter(r => r.error);
-      if (movementErrors.length > 0) {
-        console.error("Erros ao criar movimentos:", movementErrors);
-      }
+        if (movementError) {
+          console.error("Erro ao criar movimento para:", item.product.title, movementError);
+        }
 
-      // Update product stock in parallel
-      const stockUpdatePromises = cart.map((item) => {
-        const newStock = item.product.stock_quantity - item.quantity;
-        return supabase
+        // Update product stock
+        const newStock = Math.max(0, (item.product.stock_quantity || 0) - item.quantity);
+        const { error: updateError } = await supabase
           .from("products")
           .update({
             stock_quantity: newStock,
             status: newStock === 0 ? "sold" : "available",
           })
           .eq("id", item.product.id);
-      });
 
-      const updateResults = await Promise.all(stockUpdatePromises);
-      const updateErrors = updateResults.filter(r => r.error);
-      if (updateErrors.length > 0) {
-        console.error("Erros ao atualizar estoque:", updateErrors);
+        if (updateError) {
+          console.error("Erro ao atualizar estoque para:", item.product.title, updateError);
+        }
       }
 
       // Create cash flow entry
