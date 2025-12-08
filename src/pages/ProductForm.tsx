@@ -110,24 +110,42 @@ export default function ProductForm() {
         images: formData.images,
       };
 
-      if (isEditMode) {
-        const { error } = await supabase
-          .from("products")
-          .update(productData)
-          .eq("id", id);
+      let success = false;
+      let lastError: any = null;
+      
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        try {
+          if (isEditMode) {
+            const { error } = await supabase
+              .from("products")
+              .update(productData)
+              .eq("id", id);
 
-        if (error) throw error;
-        toast.success("Produto atualizado com sucesso!");
-      } else {
-        const { error } = await supabase.from("products").insert([productData]);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from("products").insert([productData]);
 
-        if (error) throw error;
-        toast.success("Produto cadastrado com sucesso!");
+            if (error) throw error;
+          }
+          success = true;
+        } catch (err: any) {
+          lastError = err;
+          console.error(`Tentativa ${attempt + 1} falhou:`, err);
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
 
+      if (!success) {
+        throw lastError || new Error("Falha após 3 tentativas");
+      }
+
+      toast.success(isEditMode ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
       navigate("/products");
     } catch (error: any) {
-      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto: ` + error.message);
+      console.error("Erro ao salvar produto:", error);
+      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto. Tente novamente.`);
     } finally {
       setLoading(false);
     }
