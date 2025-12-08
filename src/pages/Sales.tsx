@@ -135,8 +135,11 @@ export default function Sales() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        toast.error("Sessão expirada. Por favor, faça login novamente.");
+        return;
+      }
 
       const subtotal = calculateSubtotal();
       const orderNumber = `PD-${Date.now()}`;
@@ -164,37 +167,44 @@ export default function Sales() {
         .select()
         .single();
 
-      if (saleError) throw saleError;
+      if (saleError) {
+        console.error("Erro ao criar venda:", saleError);
+        throw new Error("Falha ao registrar venda");
+      }
 
-      // Create stock movements and update product quantities sequentially
-      for (const item of cart) {
-        try {
-          // Insert stock movement
-          const { error: movementError } = await supabase.from("stock_movements").insert({
-            product_id: item.product.id,
-            type: "out",
-            quantity: item.quantity,
-            reason: "Venda",
-            reference_id: saleData.id,
-          });
+      // Create stock movements in parallel
+      const stockMovementPromises = cart.map((item) =>
+        supabase.from("stock_movements").insert({
+          product_id: item.product.id,
+          type: "out",
+          quantity: item.quantity,
+          reason: "Venda",
+          reference_id: saleData.id,
+        })
+      );
 
-          if (movementError) throw movementError;
+      const movementResults = await Promise.all(stockMovementPromises);
+      const movementErrors = movementResults.filter(r => r.error);
+      if (movementErrors.length > 0) {
+        console.error("Erros ao criar movimentos:", movementErrors);
+      }
 
-          // Update product stock
-          const newStock = item.product.stock_quantity - item.quantity;
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({
-              stock_quantity: newStock,
-              status: newStock === 0 ? "sold" : "available",
-            })
-            .eq("id", item.product.id);
+      // Update product stock in parallel
+      const stockUpdatePromises = cart.map((item) => {
+        const newStock = item.product.stock_quantity - item.quantity;
+        return supabase
+          .from("products")
+          .update({
+            stock_quantity: newStock,
+            status: newStock === 0 ? "sold" : "available",
+          })
+          .eq("id", item.product.id);
+      });
 
-          if (updateError) throw updateError;
-        } catch (error: any) {
-          console.error("Erro ao processar item:", item.product.title, error);
-          throw new Error(`Falha ao atualizar estoque: ${error.message}`);
-        }
+      const updateResults = await Promise.all(stockUpdatePromises);
+      const updateErrors = updateResults.filter(r => r.error);
+      if (updateErrors.length > 0) {
+        console.error("Erros ao atualizar estoque:", updateErrors);
       }
 
       // Create cash flow entry
@@ -211,7 +221,8 @@ export default function Sales() {
       setSelectedClientId(undefined);
       fetchProducts();
     } catch (error: any) {
-      toast.error("Erro ao processar venda: " + error.message);
+      console.error("Erro ao processar venda:", error);
+      toast.error(error.message || "Erro ao processar venda. Tente novamente.");
     } finally {
       setLoading(false);
     }
