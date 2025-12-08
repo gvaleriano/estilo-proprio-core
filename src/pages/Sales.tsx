@@ -187,18 +187,33 @@ export default function Sales() {
           console.error("Erro ao criar movimento para:", item.product.title, movementError);
         }
 
-        // Update product stock
+        // Update product stock with retry
         const newStock = Math.max(0, (item.product.stock_quantity || 0) - item.quantity);
-        const { error: updateError } = await supabase
-          .from("products")
-          .update({
-            stock_quantity: newStock,
-            status: newStock === 0 ? "sold" : "available",
-          })
-          .eq("id", item.product.id);
+        let updateSuccess = false;
+        let retries = 0;
+        
+        while (!updateSuccess && retries < 3) {
+          const { error: updateError, data } = await supabase
+            .from("products")
+            .update({
+              stock_quantity: newStock,
+              status: newStock === 0 ? "sold" : "available",
+            })
+            .eq("id", item.product.id)
+            .select();
 
-        if (updateError) {
-          console.error("Erro ao atualizar estoque para:", item.product.title, updateError);
+          if (updateError) {
+            console.error(`Tentativa ${retries + 1} - Erro ao atualizar estoque para:`, item.product.title, updateError);
+            retries++;
+            await new Promise(resolve => setTimeout(resolve, 500)); // Aguarda 500ms antes de tentar novamente
+          } else {
+            updateSuccess = true;
+            console.log("Estoque atualizado:", item.product.title, "Novo estoque:", newStock, "Dados:", data);
+          }
+        }
+        
+        if (!updateSuccess) {
+          console.error("Falha ao atualizar estoque após 3 tentativas:", item.product.title);
         }
       }
 
