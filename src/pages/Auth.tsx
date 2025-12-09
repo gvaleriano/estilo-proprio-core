@@ -15,16 +15,35 @@ export default function Auth() {
   const [signupData, setSignupData] = useState({ email: "", password: "", name: "" });
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Clear any corrupted session data first
+    const clearCorruptedSession = async () => {
+      try {
+        // Try to get session, if it fails, clear localStorage
+        const { error } = await supabase.auth.getSession();
+        if (error) {
+          console.log("Clearing corrupted session...");
+          localStorage.removeItem('sb-cpmlfzqhakkermqcvmuz-auth-token');
+          await supabase.auth.signOut();
+        }
+      } catch (e) {
+        console.log("Error checking session, clearing...");
+        localStorage.removeItem('sb-cpmlfzqhakkermqcvmuz-auth-token');
+      }
+    };
+
+    clearCorruptedSession();
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, !!session);
         if (session) {
           navigate("/dashboard", { replace: true });
         }
       }
     );
 
-    // THEN check for existing session
+    // Check for existing valid session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/dashboard", { replace: true });
