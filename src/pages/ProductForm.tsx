@@ -110,42 +110,45 @@ export default function ProductForm() {
         images: formData.images,
       };
 
-      let success = false;
-      let lastError: any = null;
-      
-      for (let attempt = 0; attempt < 3 && !success; attempt++) {
-        try {
-          if (isEditMode) {
-            const { error } = await supabase
-              .from("products")
-              .update(productData)
-              .eq("id", id);
+      console.log("Dados do produto a salvar:", productData);
+      console.log("ID do produto:", id);
+      console.log("Modo de edição:", isEditMode);
 
-            if (error) throw error;
-          } else {
-            const { error } = await supabase.from("products").insert([productData]);
+      if (isEditMode) {
+        const { data, error } = await supabase
+          .from("products")
+          .update(productData)
+          .eq("id", id)
+          .select();
 
-            if (error) throw error;
-          }
-          success = true;
-        } catch (err: any) {
-          lastError = err;
-          console.error(`Tentativa ${attempt + 1} falhou:`, err);
-          if (attempt < 2) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+        console.log("Resposta do update:", { data, error });
+
+        if (error) {
+          console.error("Erro detalhado:", error);
+          throw error;
         }
-      }
+      } else {
+        const { data, error } = await supabase
+          .from("products")
+          .insert([productData])
+          .select();
 
-      if (!success) {
-        throw lastError || new Error("Falha após 3 tentativas");
+        console.log("Resposta do insert:", { data, error });
+
+        if (error) {
+          console.error("Erro detalhado:", error);
+          throw error;
+        }
       }
 
       toast.success(isEditMode ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
       navigate("/products");
     } catch (error: any) {
       console.error("Erro ao salvar produto:", error);
-      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto. Tente novamente.`);
+      console.error("Mensagem:", error?.message);
+      console.error("Código:", error?.code);
+      console.error("Detalhes:", error?.details);
+      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto: ${error?.message || "Tente novamente"}`);
     } finally {
       setLoading(false);
     }
