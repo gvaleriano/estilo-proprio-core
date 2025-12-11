@@ -119,10 +119,22 @@ export default function ProductForm() {
         console.log(`Tentativa ${attempt} de ${maxRetries}...`);
 
         if (isEditMode) {
-          const { error } = await supabase
-            .from("products")
-            .update(productData)
-            .eq("id", id);
+          // Use RPC function to avoid PATCH request issues
+          const { error } = await supabase.rpc('update_product', {
+            p_id: id,
+            p_sku: productData.sku,
+            p_title: productData.title,
+            p_description: productData.description,
+            p_category: productData.category,
+            p_size: productData.size,
+            p_brand: productData.brand,
+            p_price: productData.price,
+            p_consigned: productData.consigned,
+            p_consignor_id: productData.consignor_id,
+            p_consignment_percentage: productData.consignment_percentage,
+            p_stock_quantity: productData.stock_quantity,
+            p_images: productData.images
+          });
 
           if (error) throw error;
         } else {
