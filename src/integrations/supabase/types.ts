@@ -448,6 +448,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_product: {
+        Args: {
+          p_brand?: string
+          p_category?: string
+          p_consigned?: boolean
+          p_consignment_percentage?: number
+          p_consignor_id?: string
+          p_description?: string
+          p_id: string
+          p_images?: string[]
+          p_price?: number
+          p_size?: string
+          p_sku?: string
+          p_stock_quantity?: number
+          p_title?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "seller"
