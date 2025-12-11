@@ -90,68 +90,66 @@ export default function ProductForm() {
     }
   };
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const productData = {
-        sku: formData.sku || null,
-        title: formData.title,
-        description: formData.description || null,
-        category: formData.category || null,
-        size: formData.size || null,
-        brand: formData.brand || null,
-        price: parseFloat(formData.price),
-        consigned: formData.consigned,
-        consignor_id: formData.consigned && formData.consignor_id ? formData.consignor_id : null,
-        consignment_percentage: formData.consigned && formData.consignment_percentage ? parseFloat(formData.consignment_percentage) : null,
-        stock_quantity: parseInt(formData.stock_quantity),
-        images: formData.images,
-      };
+    const productData = {
+      sku: formData.sku || null,
+      title: formData.title,
+      description: formData.description || null,
+      category: formData.category || null,
+      size: formData.size || null,
+      brand: formData.brand || null,
+      price: parseFloat(formData.price),
+      consigned: formData.consigned,
+      consignor_id: formData.consigned && formData.consignor_id ? formData.consignor_id : null,
+      consignment_percentage: formData.consigned && formData.consignment_percentage ? parseFloat(formData.consignment_percentage) : null,
+      stock_quantity: parseInt(formData.stock_quantity),
+      images: formData.images,
+    };
 
-      console.log("Dados do produto a salvar:", productData);
-      console.log("ID do produto:", id);
-      console.log("Modo de edição:", isEditMode);
+    const maxRetries = 3;
+    let lastError: any = null;
 
-      if (isEditMode) {
-        const { data, error } = await supabase
-          .from("products")
-          .update(productData)
-          .eq("id", id)
-          .select();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Tentativa ${attempt} de ${maxRetries}...`);
 
-        console.log("Resposta do update:", { data, error });
+        if (isEditMode) {
+          const { error } = await supabase
+            .from("products")
+            .update(productData)
+            .eq("id", id);
 
-        if (error) {
-          console.error("Erro detalhado:", error);
-          throw error;
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("products")
+            .insert([productData]);
+
+          if (error) throw error;
         }
-      } else {
-        const { data, error } = await supabase
-          .from("products")
-          .insert([productData])
-          .select();
 
-        console.log("Resposta do insert:", { data, error });
-
-        if (error) {
-          console.error("Erro detalhado:", error);
-          throw error;
+        toast.success(isEditMode ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
+        navigate("/products");
+        return;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Erro na tentativa ${attempt}:`, error?.message);
+        
+        if (attempt < maxRetries) {
+          console.log(`Aguardando 500ms antes da próxima tentativa...`);
+          await delay(500);
         }
       }
-
-      toast.success(isEditMode ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
-      navigate("/products");
-    } catch (error: any) {
-      console.error("Erro ao salvar produto:", error);
-      console.error("Mensagem:", error?.message);
-      console.error("Código:", error?.code);
-      console.error("Detalhes:", error?.details);
-      toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto: ${error?.message || "Tente novamente"}`);
-    } finally {
-      setLoading(false);
     }
+
+    console.error("Todas as tentativas falharam:", lastError);
+    toast.error(`Erro ao ${isEditMode ? "atualizar" : "cadastrar"} produto. Verifique sua conexão e tente novamente.`);
+    setLoading(false);
   };
 
   return (
