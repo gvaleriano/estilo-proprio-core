@@ -15,6 +15,7 @@ import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import {
   Sidebar,
@@ -60,12 +61,13 @@ export function AppSidebar() {
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"}>
       <SidebarContent>
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
           {!collapsed && (
             <h2 className="text-lg font-bold text-sidebar-foreground">
               Estilo Próprio
             </h2>
           )}
+          <ThemeToggle />
         </div>
 
         <SidebarGroup>
