@@ -117,11 +117,10 @@ export default function Auth() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            {/* Aba de cadastro oculta temporariamente - descomentar quando necessário */}
-            {/* <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
-            </TabsList> */}
+            </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
