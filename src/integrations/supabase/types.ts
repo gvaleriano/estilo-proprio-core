@@ -58,6 +58,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          initials: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -68,6 +69,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          initials?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -78,6 +80,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          initials?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -441,6 +444,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_client_initials: {
+        Args: { client_name: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

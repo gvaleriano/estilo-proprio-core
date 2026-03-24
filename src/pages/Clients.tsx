@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -39,6 +40,7 @@ interface Client {
   email: string | null;
   phone: string | null;
   cpf: string | null;
+  initials: string | null;
 }
 
 export default function Clients() {
@@ -250,6 +252,7 @@ export default function Clients() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Sigla</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>CPF</TableHead>
@@ -260,6 +263,9 @@ export default function Clients() {
               {filteredClients.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{client.initials || "-"}</Badge>
+                  </TableCell>
                   <TableCell>{client.email || "-"}</TableCell>
                   <TableCell>{client.phone || "-"}</TableCell>
                   <TableCell>{client.cpf || "-"}</TableCell>

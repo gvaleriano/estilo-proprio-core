@@ -15,6 +15,7 @@ import ImageUpload from "@/components/ImageUpload";
 interface Client {
   id: string;
   name: string;
+  initials: string | null;
 }
 
 export default function ProductForm() {
@@ -42,13 +43,15 @@ export default function ProductForm() {
     fetchClients();
     if (id) {
       fetchProduct();
+    } else {
+      generateSku(false, "");
     }
   }, [id]);
 
   const fetchClients = async () => {
     const { data, error } = await supabase
       .from("clients")
-      .select("id, name")
+      .select("id, name, initials")
       .order("name");
 
     if (!error && data) {
@@ -90,6 +93,63 @@ export default function ProductForm() {
     }
   };
 
+  const generateSku = async (consigned: boolean, consignorId: string) => {
+    try {
+      if (!consigned) {
+        // Count EPB products
+        const { count, error } = await supabase
+          .from("products")
+          .select("*", { count: "exact", head: true })
+          .like("sku", "EPB-%");
+
+        if (error) throw error;
+        const nextNum = (count || 0) + 1;
+        const sku = `EPB-${String(nextNum).padStart(3, "0")}`;
+        setFormData((prev) => ({ ...prev, sku }));
+      } else if (consignorId) {
+        const client = clients.find((c) => c.id === consignorId);
+        if (!client) return;
+
+        const initials = client.initials || generateInitials(client.name);
+
+        // Count products for this consignor with same initials prefix
+        const { count, error } = await supabase
+          .from("products")
+          .select("*", { count: "exact", head: true })
+          .like("sku", `${initials}-%`);
+
+        if (error) throw error;
+        const nextNum = (count || 0) + 1;
+        const sku = `${initials}-${String(nextNum).padStart(3, "0")}`;
+        setFormData((prev) => ({ ...prev, sku }));
+      }
+    } catch (error) {
+      console.error("Erro ao gerar SKU:", error);
+    }
+  };
+
+  const generateInitials = (name: string): string => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return name.substring(0, 3).toUpperCase();
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return (first[0] + last.substring(0, 2)).toUpperCase();
+  };
+
+  const handleConsignedChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, consigned: checked, consignor_id: checked ? prev.consignor_id : "" }));
+    if (!isEditMode) {
+      generateSku(checked, formData.consignor_id);
+    }
+  };
+
+  const handleConsignorChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, consignor_id: value }));
+    if (!isEditMode) {
+      generateSku(true, value);
+    }
+  };
+
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +179,6 @@ export default function ProductForm() {
         console.log(`Tentativa ${attempt} de ${maxRetries}...`);
 
         if (isEditMode) {
-          // Use RPC function to avoid PATCH request issues
           const { error } = await supabase.rpc('update_product', {
             p_id: id,
             p_sku: productData.sku,
@@ -191,12 +250,13 @@ export default function ProductForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sku">SKU (opcional)</Label>
+                <Label htmlFor="sku">SKU (gerado automaticamente)</Label>
                 <Input
                   id="sku"
                   value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  placeholder="Ex: BLU-001"
+                  disabled
+                  className="bg-muted"
+                  placeholder="Gerado automaticamente"
                 />
               </div>
 
@@ -291,9 +351,7 @@ export default function ProductForm() {
               <Switch
                 id="consigned"
                 checked={formData.consigned}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, consigned: checked, consignor_id: checked ? formData.consignor_id : "" })
-                }
+                onCheckedChange={handleConsignedChange}
               />
               <Label htmlFor="consigned" className="cursor-pointer">
                 Produto consignado
@@ -304,14 +362,14 @@ export default function ProductForm() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="consignor">Consignante *</Label>
-                  <Select value={formData.consignor_id} onValueChange={(value) => setFormData({ ...formData, consignor_id: value })}>
+                  <Select value={formData.consignor_id} onValueChange={handleConsignorChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o consignante" />
                     </SelectTrigger>
                     <SelectContent>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.name}
+                          {client.name} {client.initials && `(${client.initials})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
