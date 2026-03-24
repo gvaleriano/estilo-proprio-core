@@ -251,6 +251,7 @@ export default function Clients() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Sigla</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>CPF</TableHead>
@@ -261,6 +262,9 @@ export default function Clients() {
               {filteredClients.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{client.initials || "-"}</Badge>
+                  </TableCell>
                   <TableCell>{client.email || "-"}</TableCell>
                   <TableCell>{client.phone || "-"}</TableCell>
                   <TableCell>{client.cpf || "-"}</TableCell>
