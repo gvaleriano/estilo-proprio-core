@@ -39,6 +39,7 @@ interface Client {
   email: string | null;
   phone: string | null;
   cpf: string | null;
+  initials: string | null;
 }
 
 export default function Clients() {
