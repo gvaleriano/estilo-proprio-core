@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 import {
   Dialog,
   DialogContent,
@@ -125,7 +126,8 @@ export default function Clients() {
       setFormData({ name: "", email: "", phone: "", cpf: "" });
       fetchClients();
     } catch (error: any) {
-      toast.error(`Erro ao ${editingClient ? "atualizar" : "cadastrar"} cliente: ` + error.message);
+      console.error("Erro cliente:", error);
+      toast.error(getSafeErrorMessage(error, `Erro ao ${editingClient ? "atualizar" : "cadastrar"} cliente`));
     }
   };
 
@@ -148,7 +150,8 @@ export default function Clients() {
       toast.success("Cliente excluído com sucesso!");
       fetchClients();
     } catch (error: any) {
-      toast.error("Erro ao excluir cliente: " + error.message);
+      console.error("Erro excluir cliente:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao excluir cliente"));
     } finally {
       setDeleteDialogOpen(false);
       setClientToDelete(null);

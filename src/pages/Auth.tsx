@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -70,7 +71,8 @@ export default function Auth() {
         navigate("/dashboard");
       }
     } catch (error: any) {
-      toast.error("Erro ao fazer login: " + error.message);
+      console.error("Erro login:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao fazer login"));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,8 @@ export default function Auth() {
         setSignupData({ email: "", password: "", name: "" });
       }
     } catch (error: any) {
-      toast.error("Erro ao cadastrar: " + error.message);
+      console.error("Erro cadastro:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao cadastrar"));
     } finally {
       setLoading(false);
     }
@@ -185,7 +188,7 @@ export default function Auth() {
                     value={signupData.password}
                     onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                     placeholder="••••••••"
-                    minLength={6}
+                    minLength={10}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>

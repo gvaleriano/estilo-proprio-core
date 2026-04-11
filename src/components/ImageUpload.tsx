@@ -4,7 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const validateImage = async (file: File): Promise<boolean> => {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    toast.error("Apenas imagens JPG, PNG ou WEBP são permitidas");
+    return false;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error("Arquivo muito grande. Máximo 5MB");
+    return false;
+  }
+  // Verify magic bytes
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+  const isWebp = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45;
+  if (!isJpeg && !isPng && !isWebp) {
+    toast.error("Arquivo não é uma imagem válida");
+    return false;
+  }
+  return true;
+};
 
 interface ImageUploadProps {
   images: string[];
@@ -15,7 +41,8 @@ interface ImageUploadProps {
 export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!(await validateImage(file))) return null;
     try {
       setUploading(true);
 
@@ -35,7 +62,8 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
 
       return data.publicUrl;
     } catch (error: any) {
-      toast.error("Erro ao fazer upload: " + error.message);
+      console.error("Erro upload:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao fazer upload da imagem"));
       return null;
     } finally {
       setUploading(false);
