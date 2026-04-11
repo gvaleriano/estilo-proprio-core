@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 
 type CashFlowEntry = {
   id: string;
@@ -71,7 +72,8 @@ export default function Cash() {
     });
 
     if (error) {
-      toast.error("Erro ao adicionar entrada: " + error.message);
+      console.error("Erro caixa:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao adicionar entrada"));
       return;
     }
 

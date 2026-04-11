@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 import { ArrowLeft } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -88,7 +89,8 @@ export default function ProductForm() {
         });
       }
     } catch (error: any) {
-      toast.error("Erro ao carregar produto: " + error.message);
+      console.error("Erro carregar produto:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao carregar produto"));
       navigate("/products");
     }
   };

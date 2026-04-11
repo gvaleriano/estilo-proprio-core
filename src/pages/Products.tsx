@@ -46,6 +46,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 
 interface Product {
   id: string;
@@ -138,7 +139,8 @@ export default function Products() {
       toast.success("Produto excluído com sucesso!");
       fetchProducts();
     } catch (error: any) {
-      toast.error("Erro ao excluir produto: " + error.message);
+      console.error("Erro excluir produto:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao excluir produto"));
     } finally {
       setDeleteDialogOpen(false);
       setProductToDelete(null);

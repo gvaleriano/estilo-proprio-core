@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 import { Plus, Trash2, ShoppingCart, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -232,7 +233,7 @@ export default function Sales() {
       fetchProducts();
     } catch (error: any) {
       console.error("Erro ao processar venda:", error);
-      toast.error(error.message || "Erro ao processar venda. Tente novamente.");
+      toast.error(getSafeErrorMessage(error, "Erro ao processar venda. Tente novamente."));
     } finally {
       setLoading(false);
     }

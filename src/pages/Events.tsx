@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/error-utils";
 import { Plus, Send, Calendar as CalendarIcon, Mail, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -61,7 +62,8 @@ export default function Events() {
       if (error) throw error;
       setEvents(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar eventos: " + error.message);
+      console.error("Erro eventos:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao carregar eventos"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,8 @@ export default function Events() {
       if (error) throw error;
       setClients(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar clientes: " + error.message);
+      console.error("Erro clientes:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao carregar clientes"));
     }
   };
 
@@ -107,7 +110,8 @@ export default function Events() {
       });
       fetchEvents();
     } catch (error: any) {
-      toast.error("Erro ao criar evento: " + error.message);
+      console.error("Erro criar evento:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao criar evento"));
     }
   };
 
@@ -183,7 +187,8 @@ export default function Events() {
       setSelectedClients([]);
       setAdditionalEmails("");
     } catch (error: any) {
-      toast.error("Erro ao enviar convites: " + error.message);
+      console.error("Erro convites:", error);
+      toast.error(getSafeErrorMessage(error, "Erro ao enviar convites"));
     }
   };
 
