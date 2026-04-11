@@ -19,6 +19,21 @@ interface Client {
   initials: string | null;
 }
 
+interface ProductPayload {
+  sku: string | null;
+  title: string;
+  description: string | null;
+  category: string | null;
+  size: string | null;
+  brand: string | null;
+  price: number;
+  consigned: boolean;
+  consignor_id: string | null;
+  consignment_percentage: number | null;
+  stock_quantity: number;
+  images: string[];
+}
+
 export default function ProductForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -106,33 +121,59 @@ export default function ProductForm() {
     return max;
   };
 
+  const getConsignorPrefix = async (consignorId: string) => {
+    let client = clients.find((item) => item.id === consignorId);
+
+    if (!client) {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, initials")
+        .eq("id", consignorId)
+        .maybeSingle();
+
+      if (error) throw error;
+      client = data;
+    }
+
+    if (!client) {
+      throw new Error("Consignante não encontrado para gerar o SKU");
+    }
+
+    return `${client.initials || generateInitials(client.name)}-`;
+  };
+
+  const getNextSku = async (consigned: boolean, consignorId: string) => {
+    if (!consigned) {
+      const { data, error } = await supabase
+        .from("products")
+        .select("sku")
+        .like("sku", "EPB-%");
+
+      if (error) throw error;
+
+      const maxNum = getMaxSkuNumber((data || []).map((item) => item.sku || ""), "EPB-");
+      return `EPB-${String(maxNum + 1).padStart(3, "0")}`;
+    }
+
+    if (!consignorId) return "";
+
+    const prefix = await getConsignorPrefix(consignorId);
+    const { data, error } = await supabase
+      .from("products")
+      .select("sku")
+      .like("sku", `${prefix}%`);
+
+    if (error) throw error;
+
+    const maxNum = getMaxSkuNumber((data || []).map((item) => item.sku || ""), prefix);
+    return `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
+  };
+
   const generateSku = async (consigned: boolean, consignorId: string) => {
     try {
-      if (!consigned) {
-        const { data, error } = await supabase
-          .from("products")
-          .select("sku")
-          .like("sku", "EPB-%");
+      const sku = await getNextSku(consigned, consignorId);
 
-        if (error) throw error;
-        const maxNum = getMaxSkuNumber((data || []).map(d => d.sku || ""), "EPB-");
-        const sku = `EPB-${String(maxNum + 1).padStart(3, "0")}`;
-        setFormData((prev) => ({ ...prev, sku }));
-      } else if (consignorId) {
-        const client = clients.find((c) => c.id === consignorId);
-        if (!client) return;
-
-        const initials = client.initials || generateInitials(client.name);
-        const prefix = `${initials}-`;
-
-        const { data, error } = await supabase
-          .from("products")
-          .select("sku")
-          .like("sku", `${prefix}%`);
-
-        if (error) throw error;
-        const maxNum = getMaxSkuNumber((data || []).map(d => d.sku || ""), prefix);
-        const sku = `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
+      if (sku) {
         setFormData((prev) => ({ ...prev, sku }));
       }
     } catch (error) {
@@ -164,11 +205,22 @@ export default function ProductForm() {
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  const isDuplicateSkuError = (error: any) => {
+    const message = String(error?.message || "").toLowerCase();
+    return error?.code === "23505" || message.includes("products_sku_key") || message.includes("duplicate key");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const productData = {
+    if (formData.consigned && !formData.consignor_id) {
+      toast.error("Selecione o consignante para gerar o SKU do produto consignado.");
+      setLoading(false);
+      return;
+    }
+
+    let productData: ProductPayload = {
       sku: formData.sku || null,
       title: formData.title,
       description: formData.description || null,
@@ -189,6 +241,21 @@ export default function ProductForm() {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`Tentativa ${attempt} de ${maxRetries}...`);
+
+        if (!isEditMode) {
+          const freshSku = await getNextSku(formData.consigned, formData.consignor_id);
+
+          if (!freshSku) {
+            throw new Error("Não foi possível gerar o SKU do produto.");
+          }
+
+          productData = {
+            ...productData,
+            sku: freshSku,
+          };
+
+          setFormData((prev) => ({ ...prev, sku: freshSku }));
+        }
 
         if (isEditMode) {
           const { error } = await supabase.rpc('update_product', {
@@ -222,6 +289,11 @@ export default function ProductForm() {
       } catch (error: any) {
         lastError = error;
         console.error(`Erro na tentativa ${attempt}:`, error?.message);
+
+        if (!isEditMode && isDuplicateSkuError(error) && attempt < maxRetries) {
+          await delay(300);
+          continue;
+        }
         
         if (attempt < maxRetries) {
           console.log(`Aguardando 500ms antes da próxima tentativa...`);
