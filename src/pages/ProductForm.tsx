@@ -93,34 +93,44 @@ export default function ProductForm() {
     }
   };
 
+  const getMaxSkuNumber = (skus: string[], prefix: string): number => {
+    let max = 0;
+    for (const sku of skus) {
+      if (sku && sku.startsWith(prefix)) {
+        const numPart = parseInt(sku.replace(prefix, ""), 10);
+        if (!isNaN(numPart) && numPart > max) max = numPart;
+      }
+    }
+    return max;
+  };
+
   const generateSku = async (consigned: boolean, consignorId: string) => {
     try {
       if (!consigned) {
-        // Count EPB products
-        const { count, error } = await supabase
+        const { data, error } = await supabase
           .from("products")
-          .select("*", { count: "exact", head: true })
+          .select("sku")
           .like("sku", "EPB-%");
 
         if (error) throw error;
-        const nextNum = (count || 0) + 1;
-        const sku = `EPB-${String(nextNum).padStart(3, "0")}`;
+        const maxNum = getMaxSkuNumber((data || []).map(d => d.sku || ""), "EPB-");
+        const sku = `EPB-${String(maxNum + 1).padStart(3, "0")}`;
         setFormData((prev) => ({ ...prev, sku }));
       } else if (consignorId) {
         const client = clients.find((c) => c.id === consignorId);
         if (!client) return;
 
         const initials = client.initials || generateInitials(client.name);
+        const prefix = `${initials}-`;
 
-        // Count products for this consignor with same initials prefix
-        const { count, error } = await supabase
+        const { data, error } = await supabase
           .from("products")
-          .select("*", { count: "exact", head: true })
-          .like("sku", `${initials}-%`);
+          .select("sku")
+          .like("sku", `${prefix}%`);
 
         if (error) throw error;
-        const nextNum = (count || 0) + 1;
-        const sku = `${initials}-${String(nextNum).padStart(3, "0")}`;
+        const maxNum = getMaxSkuNumber((data || []).map(d => d.sku || ""), prefix);
+        const sku = `${prefix}${String(maxNum + 1).padStart(3, "0")}`;
         setFormData((prev) => ({ ...prev, sku }));
       }
     } catch (error) {
